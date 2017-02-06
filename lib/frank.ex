@@ -122,6 +122,14 @@ defmodule Frank do
       iex> Frank.parse "Parse me!", [~r/^arse/, ~r/me!/]
       {:error, :nomatch, "Parse me!"}
 
+      iex> import Frank
+      iex> Frank.parse "192.0.2.253", [ip("192.0.2.0/24")]
+      {:ok, [root: [%NetAddr.IPv4{address: <<192, 0, 2, 253>>, length: 32}]]}
+
+      iex> import Frank
+      iex> Frank.parse "c0ff:33c0:ff33::/48", [ip("::/0")]
+      {:ok, [root: [%NetAddr.IPv6{address: <<0xc0ff33c0ff33::48, 0::80>>, length: 48}]]}
+
       iex> Frank.parse "Transform me!", [~r/transform/i, {"me!", "you!"}]
       {:ok, [root: ["Transform", "you!"]]}
 
@@ -153,16 +161,31 @@ defmodule Frank do
   def parse(input, grammar),
     do: _parse([String.split(input)], [grammar], nil, [{:root, []}])
 
-  defp match_range(_.._ = range, string) do
+  defp match_ip(netaddr, string) do
+    case NetAddr.ip(string) do
+      {:error, _} ->
+        nil
+
+      ip ->
+        NetAddr.contains?(netaddr, ip) && ip || nil
+    end
+  end
+
+  defp match_range(range, string) do
     case Integer.parse(string) do
-      {int, ""} -> (int in range) && int || nil
-              _ -> nil
+      {int, ""} ->
+        (int in range) && int || nil
+
+      _ ->
+        nil
     end
   end
 
   defp match(string, pattern) when is_binary(string) do
     case pattern do
       ^string          -> []
+      %NetAddr.IPv4{}  ->    match_ip(pattern, string)
+      %NetAddr.IPv6{}  ->    match_ip(pattern, string)
       %Range{}         -> match_range(pattern, string)
       %Regex{}         -> string =~ pattern  && string || nil
       {pat, val}       -> match(string, pat) &&    val || nil
@@ -170,6 +193,8 @@ defmodule Frank do
       _                -> nil
     end
   end
+
+  def ip(string) when is_binary(string), do: NetAddr.ip(string)
 
   def maybe(term), do: [{:or, [term, nil]}]
 
