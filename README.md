@@ -21,6 +21,14 @@ iex> Frank.parse "Parse me!", [~r/arse/, ~r/me!/]
 iex> Frank.parse "Parse me!", [~r/^arse/, ~r/me!/]
 {:error, :nomatch, "Parse me!"}
 
+iex> import Frank
+iex> Frank.parse "192.0.2.253", [ip("192.0.2.0/24")]
+{:ok, [root: [%NetAddr.IPv4{address: <<192, 0, 2, 253>>, length: 32}]]}
+
+iex> import Frank
+iex> Frank.parse "c0ff:33c0:ff33::/48", [ip("::/0")]
+{:ok, [root: [%NetAddr.IPv6{address: <<0xc0ff33c0ff33::48, 0::80>>, length: 48}]]}
+
 iex> Frank.parse "Transform me!", [~r/transform/i, {"me!", "you!"}]
 {:ok, [root: ["Transform", "you!"]]}
 
