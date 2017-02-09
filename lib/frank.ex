@@ -7,21 +7,16 @@
 defmodule Frank do
   require Logger
 
-  defp reverse({op, list})
-      when is_list(list),   do: {op, Enum.reverse(list)}
+  defp reverse({op, list}), do: {op, Enum.reverse(list)}
   defp reverse(any),        do: any
 
   defp nest(token1, token2) do
     case {token1, token2} do
-      {   [], {name,  nil}}                    -> {name, nil}
-      {token, {name,  nil}} when is_list token -> {name, token}
-      {token, {name,  nil}}                    -> {name, [token]}
-      {token,         list} when is_list(token)
-                             and is_list(list) -> token ++ list
-      {token, {name, list}} when is_list(token)
-                             and is_list(list) -> {name, token ++ list}
-      {token, {name, list}} when is_list list  -> {name, [token|list]}
-      {token,         list} when is_list list  -> [token|list]
+      {token, {name, list}} when is_list token -> {name, token ++ list}
+      {token, {name, list}}                    -> {name, [token|list]}
+      {token, list} when is_list(token)
+                     and is_list(list)         -> token ++ list
+      {token, list}                            -> [token|list]
     end
   end
 
@@ -85,7 +80,7 @@ defmodule Frank do
         _parse(List.delete_at(input, 1), stack, :match, accrete(acc))
 
       {name, _} ->      # capture matching input
-        _parse(input, [{:and, [h|t]}|stack], nil, [{name, nil}|acc])
+        _parse(input, [{:and, [h|t]}|stack], nil, [{name, []}|acc])
     end
   end
 
@@ -113,7 +108,7 @@ defmodule Frank do
   ## Examples
 
       iex> Frank.parse "Parse me!", ~w(Parse me!)
-      {:ok, [root: nil]}
+      {:ok, [root: []]}
 
       iex> Frank.parse "Parse me!", ~w(Parse me!)a
       {:ok, [root: [:Parse, :me!]]}
@@ -162,14 +157,9 @@ defmodule Frank do
       iex> word = ~r/^telo|nasa|pona$/
       iex> parse "telo nasa li pona", [{:subject, [word, maybe(word)]}, "li", {:predicate, [word]}]
       {:ok, [root: [subject: ["telo", "nasa"], predicate: ["pona"]]]}
-
-      iex> import Frank
-      iex> word = ~r/^telo|nasa|pona$/
-      iex> parse "telo nasa li ", [{:subject, [word, maybe(word)]}, "li", {:predicate, maybe(word)}]
-      {:ok, [root: [subject: ["telo", "nasa"], predicate: nil]]}
   """
   def parse(input, grammar),
-    do: _parse([String.split(input)], [grammar], nil, [{:root, nil}])
+    do: _parse([String.split(input)], [grammar], nil, [{:root, []}])
 
   defp match_ip(netaddr, string) do
     case NetAddr.ip(string) do
