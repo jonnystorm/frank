@@ -46,9 +46,15 @@ defmodule FrankTest do
       == {:ok, [root: [static_obj_nat: ["(dmz,outside)", NetAddr.ip("192.0.2.1")]]]}
   end
 
-  test "parses maybe and other stuff within named capture" do
+  test "fails to parse unmatched text with maybe and other stuff within named capture" do
     spec = [{:test, [{:or, ["stuff", nil]}, "other-stuff"]}]
 
     assert parse("something", spec) == {:error, :nomatch, "something"}
+  end
+
+  test "parses matching text with maybe and other stuff within named capture" do
+    spec = [test: ["stuff", {:or, ["junk", nil]}, :things]]
+
+    assert parse("stuff things", spec) == {:ok, [root: [test: [:things]]]}
   end
 end

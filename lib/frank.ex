@@ -96,9 +96,10 @@ defmodule Frank do
     end
   end
 
-  # nil positively matches nothing, consuming no input
+  # nil positively matches nothing, consuming no input.
+  #   Prepending [] prevents premature accretion of tokens containing this one.
   defp _parse(input, [nil|stack], nil, acc),
-    do: _parse(input, stack, :match, acc)
+    do: _parse(input, stack, :match, [[]|acc])
 
   # Discard current pattern and return :nomatch when there is nothing to match
   defp _parse([[]|_] = input, [_|stack], nil, acc),
