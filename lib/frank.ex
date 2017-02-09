@@ -66,37 +66,33 @@ defmodule Frank do
   # While patterns for this branch remain
   defp _parse(input, [{op, [h|t]}|stack], last_result, acc) when is_atom(op) do
     case {op, last_result} do
-      {:and,   :match} -> _parse(input, [h, {op, t}|stack], nil, [[]|accrete(acc)])  # continue
-      {:and,      nil} -> _parse(input, [h, {op, t}|stack], nil,         [[]|acc])   # start
-      {:and, :nomatch} -> _parse(input,             stack, :nomatch,      tl(acc))   # abort/fail
-      { :or, :nomatch} ->                                                            # continue
+      {:and,   :match} -> _parse(input, [h, {op, t}|stack], nil,   accrete(acc))  # continue
+      {:and,      nil} -> _parse(input, [h, {op, t}|stack], nil,       [[]|acc])  # start
+      {:and, :nomatch} -> _parse(input,             stack, :nomatch,    tl(acc))  # abort/fail
+      { :or, :nomatch} ->                                                         # continue
         input = tl input
 
-        _parse(      [hd(input)|input], [h, {op, t}|stack], nil,      [[]|tl(acc)])
+        _parse(      [hd(input)|input], [h, {op, t}|stack], nil,    [[]|tl(acc)])
 
       {:or, nil} ->        # start
-        _parse(      [hd(input)|input], [h, {op, t}|stack], nil,         [[]|acc])
+        _parse(      [hd(input)|input], [h, {op, t}|stack], nil,       [[]|acc])
 
       {:or, :match} ->     # abort/succeed
-        _parse(List.delete_at(input, 1),            stack, :match,   accrete(acc))
+        _parse(List.delete_at(input, 1),            stack, :match, accrete(acc))
 
-      {:many, nil} ->      # start
-        _parse(input, [[h|t], {op, [h|t]}|stack], nil, [[]|acc])
-
-      {:many, :match} ->   # continue
-        _parse(input, [[h|t], {op, [h|t]}|stack], nil, [[]|accrete(acc)])
-
-      {:many, :nomatch} -> # term/succeed/fail
-        [collected|_] = accrete acc
+      {:many,      nil} -> _parse(input, [[h|t], {op, [h|t]}|stack], nil, [[]|acc])     # start
+      {:many,   :match} -> _parse(input, [[h|t], {op, [h|t]}|stack], nil, accrete(acc)) # continue
+      {:many, :nomatch} ->                                                              # term/succeed/fail
+        [collected|_] = acc
 
         if length(collected) > 0 do
           _parse(input, stack, :match, accrete(acc))
         else
-          _parse(input, stack, :nomatch, acc)
+          _parse(input, stack, :nomatch, tl(acc))
         end
 
-      {name, _} ->      # capture matching input
-        _parse(input, [{:and, [h|t]}|stack], nil, [{name, []}|acc])
+      {name, _} ->  # assign name to matching input
+        _parse(input, [h, {:and, t}|stack], nil, [{name, []}|acc])
     end
   end
 
@@ -111,9 +107,9 @@ defmodule Frank do
   # Match next word in input
   defp _parse([[h|t]|rest], [top|stack], nil, acc) do
     if value = match(h, top) do
-      _parse([   t |rest], stack, :match, accrete([value|acc]))
+      _parse([   t |rest], stack, :match, [value|acc])
     else
-      _parse([[h|t]|rest], stack, :nomatch,              acc)
+      _parse([[h|t]|rest], stack, :nomatch,      acc)
     end
   end
 
