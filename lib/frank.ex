@@ -98,7 +98,7 @@ defmodule Frank do
 
   # nil positively matches nothing, consuming no input
   defp _parse(input, [nil|stack], nil, acc),
-    do: _parse(input, stack, :match, tl(acc))
+    do: _parse(input, stack, :match, acc)
 
   # Discard current pattern and return :nomatch when there is nothing to match
   defp _parse([[]|_] = input, [_|stack], nil, acc),
