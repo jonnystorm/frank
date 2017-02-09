@@ -7,16 +7,17 @@
 defmodule Frank do
   require Logger
 
-  defp reverse({op, list}), do: {op, Enum.reverse(list)}
-  defp reverse(any),        do: any
+  defp reverse({op, list})
+      when is_list(list), do: {op, Enum.reverse(list)}
+  defp reverse(term),     do: term
 
   defp nest(token1, token2) do
     case {token1, token2} do
       {token, {name, list}} when is_list token -> {name, token ++ list}
-      {token, {name, list}}                    -> {name, [token|list]}
+      {token, {name, list}} when is_list list  -> {name, [token|list]}
       {token, list} when is_list(token)
                      and is_list(list)         -> token ++ list
-      {token, list}                            -> [token|list]
+      {token, list} when is_list list          -> [token|list]
     end
   end
 
@@ -38,7 +39,7 @@ defmodule Frank do
     do: {:ok, [reverse(root)]}
 
   # Accrete dangling branches into root
-  defp _parse([[]], [], _, acc),
+  defp _parse([[]], [], :match, acc),
     do: _parse([[]], [], :match, accrete(acc))
 
   # Terminating condition: failure
@@ -71,13 +72,28 @@ defmodule Frank do
       { :or, :nomatch} ->                                                            # continue
         input = tl input
 
-        _parse([hd(input)|input], [h, {op, t}|stack], nil,      acc)
+        _parse(      [hd(input)|input], [h, {op, t}|stack], nil,             acc)
 
-      {:or, nil} ->     # start
-        _parse([hd(input)|input], [h, {op, t}|stack], nil,  [[]|acc])
+      {:or, nil} ->        # start
+        _parse(      [hd(input)|input], [h, {op, t}|stack], nil,         [[]|acc])
 
-      {:or, :match} ->  # abort/succeed
-        _parse(List.delete_at(input, 1), stack, :match, accrete(acc))
+      {:or, :match} ->     # abort/succeed
+        _parse(List.delete_at(input, 1),            stack, :match,   accrete(acc))
+
+      {:many, nil} ->      # start
+        _parse(input, [[h|t], {op, [h|t]}|stack], nil, [[]|acc])
+
+      {:many, :match} ->   # continue
+        _parse(input, [[h|t], {op, [h|t]}|stack], nil, [[]|accrete(acc)])
+
+      {:many, :nomatch} -> # term/succeed/fail
+        [collected|_] = accrete acc
+
+        if length(collected) > 0 do
+          _parse(input, stack, :match, accrete(acc))
+        else
+          _parse(input, stack, :nomatch, acc)
+        end
 
       {name, _} ->      # capture matching input
         _parse(input, [{:and, [h|t]}|stack], nil, [{name, []}|acc])
@@ -157,6 +173,26 @@ defmodule Frank do
       iex> word = ~r/^telo|nasa|pona$/
       iex> parse "telo nasa li pona", [{:subject, [word, maybe(word)]}, "li", {:predicate, [word]}]
       {:ok, [root: [subject: ["telo", "nasa"], predicate: ["pona"]]]}
+
+      iex> import Frank
+      iex> parse "required", ["required", maybe({:flag, ["optional"]})]
+      {:ok, [root: []]}
+
+      iex> import Frank
+      iex> parse "required optional", ["required", maybe({:flag, ["optional"]})]
+      {:ok, [root: [flag: []]]}
+
+      iex> import Frank
+      iex> parse "things things things", many_of :things
+      {:ok, [root: [:things, :things, :things]]}
+
+      iex> import Frank
+      iex> parse "stuff", ["stuff", many_of(:things)]
+      {:error, :nomatch, ""}
+
+      iex> import Frank
+      iex> parse "stuff things blah junk", ["stuff", many_of(one_of [ [:things, maybe(~r/.*/)], :junk])]
+      {:ok, [root: [:things, "blah", :junk]]}
   """
   def parse(input, grammar),
     do: _parse([String.split(input)], [grammar], nil, [{:root, []}])
@@ -195,6 +231,8 @@ defmodule Frank do
   end
 
   def ip(string) when is_binary(string), do: NetAddr.ip(string)
+
+  def many_of(term), do: [many: [term]]
 
   def maybe(term), do: [{:or, [term, nil]}]
 
