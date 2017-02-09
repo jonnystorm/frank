@@ -36,4 +36,13 @@ defmodule FrankTest do
                                    destination: [:range, 22, 80]
                                  ]]]}
   end
+
+  test "parses another realistic grammar" do
+    spec = one_of [ [net_obj_def: [fqdn: ["fqdn", maybe(:v4), ~r/^.*$/]]],
+                    [static_obj_nat: ["nat", maybe(~r/^\(.*,.*\)$/), "static", ip("0/0")]],
+                  ]
+
+    assert parse("nat (dmz,outside) static 192.0.2.1", spec)
+      == {:ok, [root: [static_obj_nat: ["(dmz,outside)", NetAddr.ip("192.0.2.1")]]]}
+  end
 end

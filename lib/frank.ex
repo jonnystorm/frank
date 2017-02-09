@@ -72,7 +72,7 @@ defmodule Frank do
       { :or, :nomatch} ->                                                            # continue
         input = tl input
 
-        _parse(      [hd(input)|input], [h, {op, t}|stack], nil,             acc)
+        _parse(      [hd(input)|input], [h, {op, t}|stack], nil,      [[]|tl(acc)])
 
       {:or, nil} ->        # start
         _parse(      [hd(input)|input], [h, {op, t}|stack], nil,         [[]|acc])
