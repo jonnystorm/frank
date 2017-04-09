@@ -38,7 +38,7 @@ defmodule FrankTest do
   end
 
   test "parses another realistic grammar" do
-    spec = one_of [ net_obj_def: [fqdn: ["fqdn", maybe(:v4), ~r/^.*$/]],
+    spec = one_of [    net_obj_def: [fqdn: ["fqdn", maybe(:v4), ~r/^.*$/]],
                     static_obj_nat: ["nat", maybe(~r/^\(.*,.*\)$/), "static", ip("0/0")],
                   ]
 

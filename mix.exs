@@ -2,12 +2,26 @@ defmodule Frank.Mixfile do
   use Mix.Project
 
   def project do
-    [app: :frank,
-     version: "0.0.7",
-     elixir: "~> 1.4",
-     build_embedded: Mix.env == :prod,
-     start_permanent: Mix.env == :prod,
-     deps: deps()]
+    [ app: :frank,
+      version: "0.0.7",
+      elixir: "~> 1.4",
+      build_embedded: Mix.env == :prod,
+      start_permanent: Mix.env == :prod,
+      deps: deps(),
+      dialyzer: [
+        plt_add_apps: [
+          :logger,
+          :netaddr_ex,
+        ],
+        ignore_warnings: "dialyzer.ignore",
+        flags: [
+          :unmatched_returns,
+          :error_handling,
+          :race_conditions,
+          :underspecs,
+        ],
+      ],
+    ]
   end
 
   # Configuration for the OTP application

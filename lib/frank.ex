@@ -1,8 +1,6 @@
-# Copyright © 2017 Jonathan Storm <jds@idio.link>
-# This work is free. You can redistribute it and/or modify it under the
-# terms of the Do What The Fuck You Want To Public License, Version 2,
-# as published by Sam Hocevar. See the COPYING.WTFPL file for more
-# details.
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
 
 defmodule Frank do
   require Logger
@@ -27,9 +25,9 @@ defmodule Frank do
     :ok = Logger.debug("Accrete token stack: [#{inspect token1}, #{inspect token2} | #{inspect rest}")
 
     token1
-      |> reverse
-      |> nest(token2)
-      |> unhd(rest)
+    |> reverse
+    |> nest(token2)
+    |> unhd(rest)
   end
 
   defp accrete(term), do: term
@@ -227,12 +225,15 @@ defmodule Frank do
     end
   end
 
+  @spec ip(String.t) :: NetAddr.t
   def ip(string) when is_binary(string), do: NetAddr.ip(string)
 
+  @spec many_of(term) :: [{:many, [any, ...]}, ...]
   def many_of(term), do: [many: [term]]
 
-  def maybe(term), do: [{:or, [term, nil]}]
+  @spec maybe(term) :: [{:or, [any, ...]}, ...]
+  def maybe(term), do: [or: [term, nil]]
 
-  def one_of(list) when is_list(list), do: [{:or, list}]
+  @spec one_of([term, ...]) :: [or: [any, ...]]
+  def one_of(list) when is_list(list), do: [or: list]
 end
-
