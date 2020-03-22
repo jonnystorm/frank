@@ -6,12 +6,16 @@ defmodule Frank do
   require Logger
 
   defp reverse({op, list})
-      when is_list(list), do: {op, Enum.reverse(list)}
-  defp reverse(term),     do: term
+      when is_list(list),
+    do: {op, Enum.reverse(list)}
+
+  defp reverse(term),
+    do: term
 
   defp nest(token1, token2) do
     case {token1, token2} do
-      {token, {name, list}} when is_list token -> {name, token ++ list}
+      {token, {name, list}} when is_list(token)
+                             and is_list(list) -> {name, token ++ list}
       {token, {name, list}} when is_list list  -> {name, [token|list]}
       {token, list} when is_list(token)
                      and is_list(list)         -> token ++ list
@@ -46,47 +50,44 @@ defmodule Frank do
   end
 
   # Replace bare list with {:and, list}
-  defp _parse(input, [list|stack], last_result, acc) when is_list(list),
+  defp _parse(input, [list|stack], last_result, acc)
+      when is_list(list),
     do: _parse(input, [{:and, list}|stack], last_result, acc)
 
   # When patterns for this branch are exhausted
   defp _parse(input, [{op, []}|stack], last_result, acc) when is_atom(op) do
     case {op, last_result} do
-      {   _,      nil} -> _parse(   input,  stack, :nomatch,       acc)   # start/fail
-      {:and, :nomatch} -> _parse(   input,  stack, :nomatch,    tl(acc))  # term/fail
-      { :or, :nomatch} -> _parse(tl(input), stack, :nomatch,    tl(acc))  # term/fail
-      {:and,   :match} -> _parse(   input,  stack, :match, accrete(acc))  # term/succeed
-      { :or,   :match} ->                                                 # term/succeed
-        _parse(List.delete_at(input, 1),    stack, :match, accrete(acc))
+      {   _,      nil} -> _parse(   input,     stack, :nomatch,       acc)   # start/fail
+      {:and, :nomatch} -> _parse(   input,     stack, :nomatch,    tl(acc))  # term/fail
+      { :or, :nomatch} -> _parse(tl(input),    stack, :nomatch,    tl(acc))  # term/fail
+      {:and,   :match} -> _parse(   input,     stack, :match, accrete(acc))  # term/succeed
+      { :or,   :match} ->
+        _parse(      List.delete_at(input, 1), stack, :match, accrete(acc))  # term/succeed
     end
   end
 
   # While patterns for this branch remain
   defp _parse(input, [{op, [h|t]}|stack], last_result, acc) when is_atom(op) do
     case {op, last_result} do
-      {:and,   :match} -> _parse(input, [h, {op, t}|stack], nil,   accrete(acc))  # continue
-      {:and,      nil} -> _parse(input, [h, {op, t}|stack], nil,       [[]|acc])  # start
-      {:and, :nomatch} -> _parse(input,             stack, :nomatch,    tl(acc))  # abort/fail
-      { :or, :nomatch} ->                                                         # continue
-        input = tl input
-
-        _parse(      [hd(input)|input], [h, {op, t}|stack], nil,    [[]|tl(acc)])
-
-      {:or, nil} ->        # start
-        _parse(      [hd(input)|input], [h, {op, t}|stack], nil,       [[]|acc])
-
-      {:or, :match} ->     # abort/succeed
-        _parse(List.delete_at(input, 1),            stack, :match, accrete(acc))
-
-      {:many,      nil} -> _parse(input, [[h|t], {op, [h|t]}|stack], nil, [[]|acc])     # start
-      {:many,   :match} -> _parse(input, [[h|t], {op, [h|t]}|stack], nil, accrete(acc)) # continue
-      {:many, :nomatch} ->                                                              # term/succeed/fail
+      {:and,   :match}  -> _parse(input,  [h,    {op,    t} |stack], nil,   accrete(acc))  # continue
+      {:and,      nil}  -> _parse(input,  [h,    {op,    t} |stack], nil,       [[]|acc])  # start
+      {:and, :nomatch}  -> _parse(input,                     stack, :nomatch,    tl(acc))  # abort/fail
+      { :or, :nomatch}  ->                                                                 # continue
+        input = tl(input)
+        _parse(        [hd(input)|input], [h,    {op,    t} |stack], nil,    [[]|tl(acc)])
+      {:or, nil}        ->                                                                 # start
+        _parse(        [hd(input)|input], [h,    {op,    t} |stack], nil,       [[]|acc])
+      {:or, :match}     ->                                                                 # abort/succeed
+        _parse(    List.delete_at(input, 1),                 stack, :match, accrete(acc))
+      {:many,      nil} -> _parse(input, [[h|t], {op, [h|t]}|stack], nil,       [[]|acc])  # start
+      {:many,   :match} -> _parse(input, [[h|t], {op, [h|t]}|stack], nil,   accrete(acc))  # continue
+      {:many, :nomatch} ->                                                                 # term/succeed/fail
         [collected|_] = acc
 
-        if length(collected) > 0 do
-          _parse(input, stack, :match, accrete(acc))
-        else
+        if length(collected) == 0 do
           _parse(input, stack, :nomatch, tl(acc))
+        else
+          _parse(input, stack, :match, accrete(acc))
         end
 
       {name, _} ->  # assign name to matching input
@@ -189,15 +190,20 @@ defmodule Frank do
       iex> parse "stuff things blah junk", ["stuff", many_of(one_of [ [:things, maybe(~r/.*/)], :junk])]
       {:ok, [root: [:things, "blah", :junk]]}
   """
-  def parse(input, grammar),
-    do: _parse([String.split(input)], [grammar], nil, [{:root, []}])
+  def parse(input, grammar) do
+    ( [ input
+        |> :binary.split([" ", "\t"], [:global, :trim_all])
+      ]
+    )
+    |> _parse([grammar], nil, [{:root, []}])
+  end
 
   defp match_ip(netaddr, string) do
-    case NetAddr.ip(string) do
+    case NetAddr.ip_2(string) do
       {:error, _} ->
         nil
 
-      ip ->
+      {:ok, ip} ->
         NetAddr.contains?(netaddr, ip) && ip || nil
     end
   end
@@ -215,8 +221,8 @@ defmodule Frank do
   defp match(string, pattern) when is_binary(string) do
     case pattern do
       ^string          -> []
-      %NetAddr.IPv4{}  ->    match_ip(pattern, string)
-      %NetAddr.IPv6{}  ->    match_ip(pattern, string)
+      %NetAddr.IPv4{}  -> match_ip(pattern, string)
+      %NetAddr.IPv6{}  -> match_ip(pattern, string)
       %Range{}         -> match_range(pattern, string)
       %Regex{}         -> string =~ pattern  && string || nil
       {pat, val}       -> match(string, pat) &&    val || nil
@@ -225,15 +231,29 @@ defmodule Frank do
     end
   end
 
-  @spec ip(String.t) :: NetAddr.t
-  def ip(string) when is_binary(string), do: NetAddr.ip(string)
+  @spec ip(String.t)
+    :: NetAddr.t
+  def ip(string)
+      when is_binary(string)
+  do
+    {:ok, ip} = NetAddr.ip_2(string)
 
-  @spec many_of(term) :: [{:many, [any, ...]}, ...]
-  def many_of(term), do: [many: [term]]
+    ip
+  end
 
-  @spec maybe(term) :: [{:or, [any, ...]}, ...]
-  def maybe(term), do: [or: [term, nil]]
+  @spec many_of(term)
+    :: [{:many, [any, ...]}, ...]
+  def many_of(term),
+    do: [many: [term]]
 
-  @spec one_of([term, ...]) :: [or: [any, ...]]
-  def one_of(list) when is_list(list), do: [or: list]
+  @spec maybe(term)
+    :: [{:or, [any, ...]}, ...]
+  def maybe(term),
+    do: [or: [term, nil]]
+
+  @spec one_of([term, ...])
+    :: [or: [any, ...]]
+  def one_of(list)
+      when is_list(list),
+    do: [or: list]
 end
