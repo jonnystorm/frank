@@ -29,9 +29,10 @@ defmodule FrankTest do
                              destination,
                            ])]]
 
-    string = "service source gt 1023 destination range 22 www"
+    input =
+      ~w"service source gt 1023 destination range 22 www"
 
-    assert parse(string, grammar) ==
+    assert parse(input, grammar) ==
       {:ok, [root: [service_def: [ source: [:gt, 1023],
                                    destination: [range: [22, 80]],
                                  ]]]}
@@ -42,19 +43,33 @@ defmodule FrankTest do
                     static_obj_nat: ["nat", maybe(~r/^\(.*,.*\)$/), "static", ip("0/0")],
                   ]
 
-    assert parse("nat (dmz,outside) static 192.0.2.1", spec)
-      == {:ok, [root: [static_obj_nat: ["(dmz,outside)", NetAddr.ip("192.0.2.1")]]]}
+    assert parse(~w"nat (dmz,outside) static 192.0.2.1", spec)
+      == { :ok,
+           [ root:
+             [ static_obj_nat:
+               ["(dmz,outside)", NetAddr.ip("192.0.2.1")]
+             ]
+           ]
+         }
   end
 
-  test "fails to parse unmatched text with maybe and other stuff within named capture" do
+  test """
+    fails to parse unmatched text with maybe and other stuff
+    within named capture
+  """ do
     spec = [{:test, [{:or, ["stuff", nil]}, "other-stuff"]}]
 
-    assert parse("something", spec) == {:error, :nomatch, "something"}
+    assert parse(~w"something", spec) ==
+      {:error, :nomatch, "something"}
   end
 
-  test "parses matching text with maybe and other stuff within named capture" do
+  test """
+  parses matching text with maybe and other stuff within
+  named capture
+  """ do
     spec = [test: ["stuff", {:or, ["junk", nil]}, :things]]
 
-    assert parse("stuff things", spec) == {:ok, [root: [test: [:things]]]}
+    assert parse(~w"stuff things", spec) ==
+      {:ok, [root: [test: [:things]]]}
   end
 end

@@ -114,88 +114,87 @@ defmodule Frank do
   end
 
   @doc """
-  Parse a single-line, space-delimited input string given a grammar with which
-  to parse it.
+  Parse a list of bare tokens, given a grammar with which to
+  parse it.
 
   ## Examples
 
-      iex> Frank.parse "Parse me!", ~w(Parse me!)
+      iex> Frank.parse ~w"Parse me!", ~w(Parse me!)
       {:ok, [root: []]}
 
-      iex> Frank.parse "Parse me!", ~w(Parse me!)a
+      iex> Frank.parse ~w"Parse me!", ~w(Parse me!)a
       {:ok, [root: [:Parse, :me!]]}
 
-      iex> Frank.parse "Parse me!", [~r/Parse/, ~r/me!/]
+      iex> Frank.parse ~w"Parse me!", [~r/Parse/, ~r/me!/]
       {:ok, [root: ["Parse", "me!"]]}
 
-      iex> Frank.parse "Parse me!", [~r/arse/, ~r/me!/]
+      iex> Frank.parse ~w"Parse me!", [~r/arse/, ~r/me!/]
       {:ok, [root: ["Parse", "me!"]]}
 
-      iex> Frank.parse "Parse me!", [~r/^arse/, ~r/me!/]
+      iex> Frank.parse ~w"Parse me!", [~r/^arse/, ~r/me!/]
       {:error, :nomatch, "Parse me!"}
 
       iex> import Frank
-      iex> Frank.parse "192.0.2.253", [ip("192.0.2.0/24")]
+      iex> Frank.parse ~w"192.0.2.253", [ip("192.0.2.0/24")]
       {:ok, [root: [%NetAddr.IPv4{address: <<192, 0, 2, 253>>, length: 32}]]}
 
       iex> import Frank
-      iex> Frank.parse "c0ff:33c0:ff33::/48", [ip("::/0")]
+      iex> Frank.parse ~w"c0ff:33c0:ff33::/48", [ip("::/0")]
       {:ok, [root: [%NetAddr.IPv6{address: <<0xc0ff33c0ff33::48, 0::80>>, length: 48}]]}
 
-      iex> Frank.parse "Transform me!", [~r/transform/i, {"me!", "you!"}]
+      iex> Frank.parse ~w"Transform me!", [~r/transform/i, {"me!", "you!"}]
       {:ok, [root: ["Transform", "you!"]]}
 
-      iex> Frank.parse "55", [1..100]
+      iex> Frank.parse ~w"55", [1..100]
       {:ok, [root: [55]]}
 
       iex> import Frank
-      iex> parse "I am a duck", ~w(I am a) ++ one_of ~w(swan goose duck)a
+      iex> parse ~w"I am a duck", ~w(I am a) ++ one_of ~w(swan goose duck)a
       {:ok, [root: [:duck]]}
 
       iex> import Frank
-      iex> parse "This is a poodle", [~w(This is a), maybe("french"), :poodle]
+      iex> parse ~w"This is a poodle", [~w(This is a), maybe("french"), :poodle]
       {:ok, [root: [:poodle]]}
 
       iex> import Frank
-      iex> parse "This is a french poodle", [~w(This is a), maybe("french"), :poodle]
+      iex> parse ~w"This is a french poodle", [~w(This is a), maybe("french"), :poodle]
       {:ok, [root: [:poodle]]}
 
       iex> import Frank
       iex> adjective = one_of ~w(suli lili)a
-      iex> parse "mi moku suli e telo nasa", [~w(mi moku), maybe(adjective), ~w(e telo nasa)]
+      iex> parse ~w"mi moku suli e telo nasa", [~w(mi moku), maybe(adjective), ~w(e telo nasa)]
       {:ok, [root: [:suli]]}
 
       iex> import Frank
       iex> word = ~r/^telo|nasa|pona$/
-      iex> parse "telo nasa li pona", [{:subject, [word, maybe(word)]}, "li", {:predicate, [word]}]
+      iex> parse ~w"telo nasa li pona", [{:subject, [word, maybe(word)]}, "li", {:predicate, [word]}]
       {:ok, [root: [subject: ["telo", "nasa"], predicate: ["pona"]]]}
 
       iex> import Frank
-      iex> parse "required", ["required", maybe({:flag, ["optional"]})]
+      iex> parse ~w"required", ["required", maybe({:flag, ["optional"]})]
       {:ok, [root: []]}
 
       iex> import Frank
-      iex> parse "required optional", ["required", maybe({:flag, ["optional"]})]
+      iex> parse ~w"required optional", ["required", maybe({:flag, ["optional"]})]
       {:ok, [root: [flag: []]]}
 
       iex> import Frank
-      iex> parse "things things things", many_of :things
+      iex> parse ~w"things things things", many_of :things
       {:ok, [root: [:things, :things, :things]]}
 
       iex> import Frank
-      iex> parse "stuff", ["stuff", many_of(:things)]
+      iex> parse ~w"stuff", ["stuff", many_of(:things)]
       {:error, :nomatch, ""}
 
       iex> import Frank
-      iex> parse "stuff things blah junk", ["stuff", many_of(one_of [ [:things, maybe(~r/.*/)], :junk])]
+      iex> parse ~w"stuff things blah junk", ["stuff", many_of(one_of [ [:things, maybe(~r/.*/)], :junk])]
       {:ok, [root: [:things, "blah", :junk]]}
   """
-  def parse(input, grammar) do
-    ( [ input
-        |> :binary.split([" ", "\t"], [:global, :trim_all])
-      ]
-    )
-    |> _parse([grammar], nil, [{:root, []}])
+  def parse(input, grammar)
+      when is_list(input)
+       and is_list(grammar)
+  do
+    _parse([input], [grammar], nil, [root: []])
   end
 
   defp match_ip(netaddr, string) do
