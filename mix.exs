@@ -3,7 +3,7 @@ defmodule Frank.Mixfile do
 
   def project do
     [ app: :frank,
-      version: "0.0.7",
+      version: "0.0.8",
       elixir: "~> 1.4",
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
@@ -42,6 +42,9 @@ defmodule Frank.Mixfile do
   #
   # Type "mix help deps" for more examples and options
   defp deps do
-    [{:netaddr_ex, git: "https://github.com/jonnystorm/netaddr-elixir"}]
+    [ { :netaddr_ex,
+        git: "https://gitlab.com/jonnystorm/netaddr-elixir.git"
+      },
+    ]
   end
 end
